@@ -75,6 +75,8 @@ def log(msg):
 def texte_visible(html):
     """Retire scripts/styles/balises pour garder le texte lisible de la page."""
     html = re.sub(r"(?is)<(script|style|noscript)[^>]*>.*?</\1>", " ", html)
+    # garde le texte alternatif des images (ex : logo "E.Leclerc" après "Vendu par")
+    html = re.sub(r'(?is)<img[^>]*?\balt="([^"]*)"[^>]*>', r" \1 ", html)
     texte = re.sub(r"(?s)<[^>]+>", " ", html)
     return re.sub(r"\s+", " ", texte)
 
@@ -85,6 +87,7 @@ def analyser(url):
     url = url.split("?")[0]
     r = requests.get(url, headers=HEADERS, timeout=20)
     r.raise_for_status()
+    r.encoding = "utf-8"            # sinon les accents sortent en "PokÃ©mon"
     html = r.text
     texte = texte_visible(html)
     bas = texte.lower()
@@ -105,10 +108,24 @@ def analyser(url):
             break
 
     # Vendeur : la page affiche "Vendu par E.Leclerc" ou "Vendu par <vendeur tiers>"
-    m = re.search(r"Vendu par\s+([^\s][^|•\n]{0,40}?)(?=\s+(?:SNC|Pays|Neuf|Occasion|Voir|\d)|$)",
-                  texte)
-    vendeur = m.group(1).strip() if m else "?"
-    vendu_par_leclerc = vendeur.lower().replace(" ", "").startswith("e.leclerc")
+    vendeur = "?"
+    m = re.search(r"(?i)vendu par\b", texte)
+    if m:
+        apres = texte[m.end():m.end() + 80]
+        if "e.leclerc" in apres.lower() or "lcommerce" in apres.lower():
+            vendeur = "E.Leclerc"
+        else:
+            n = re.match(r"\s*([A-Za-zÀ-ÿ0-9][^€]{0,40}?)(?=\s+(?:SNC|Pays|Neuf|Occasion|Voir"
+                         r"|En stock|Indisponible|Ajouter|\d)|\s*$)", apres)
+            if n and not re.match(r"\d", n.group(1)):
+                vendeur = n.group(1).strip()
+    # Mention légale de l'offre E.Leclerc : "SNC LCOMMERCE"
+    if vendeur == "?" and "lcommerce" in bas:
+        vendeur = "E.Leclerc"
+    # Vendeur introuvable -> on considère que c'est E.Leclerc (les vendeurs tiers
+    # sont affichés en texte) : mieux vaut une notif de trop qu'un restock raté
+    vendu_par_leclerc = (vendeur == "?"
+                         or vendeur.lower().replace(" ", "").startswith("e.leclerc"))
 
     rupture = any(mot in bas for mot in MOTS_RUPTURE) and "en stock" not in bas
     if rupture:
@@ -175,7 +192,8 @@ def verifier_tout(etat, test=False):
                            and avant.get("prix") and avant["prix"] != info["prix"])
             if devient_dispo:
                 notifier("🟢 DISPO chez E.Leclerc ! " + info["nom"][:50],
-                         f"Prix : {info['prix'] or '?'} €", url)
+                         f"Prix : {info['prix'] or '?'} €\nVendeur : {info['vendeur']}"
+                         + (" (à vérifier)" if info["vendeur"] == "?" else ""), url)
                 log("  → notification envoyée")
             elif prix_change:
                 notifier("ℹ️ Prix modifié : " + info["nom"][:50],
