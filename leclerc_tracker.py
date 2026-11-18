@@ -15,7 +15,7 @@ Utilisation :
 
 Notifications téléphone (gratuit, sans compte) :
     1. Installe l'app "ntfy" (Play Store)
-    2. Abonne-toi à un sujet au nom unique, ex : kevin-pokebox-8f3k2
+    2. Abonne-toi à un sujet au nom unique, ex :
     3. Mets ce même nom dans NTFY_TOPIC ci-dessous
 """
 
@@ -38,7 +38,7 @@ PRODUITS = [
 ]
 
 INTERVALLE_MINUTES = 5          # fréquence de vérification (évite < 2 min)
-NTFY_TOPIC = ""                 # ex : "kevin-pokebox-8f3k2" (vide = désactivé)
+NTFY_TOPIC = ""                 # ex : " (vide = désactivé)
 DISCORD_WEBHOOK = ""            # URL de webhook Discord (vide = désactivé)
 
 # Sur GitHub Actions, ces valeurs viennent des "secrets" du dépôt
