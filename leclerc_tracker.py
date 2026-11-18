@@ -120,7 +120,7 @@ def analyser(url):
             if n and not re.match(r"\d", n.group(1)):
                 vendeur = n.group(1).strip()
     # Mention légale de l'offre E.Leclerc : "SNC LCOMMERCE"
-    if vendeur == "?" and "lcommerce" in bas:
+    if vendeur == "?" and "lcommerce" in html.lower():
         vendeur = "E.Leclerc"
     # Vendeur introuvable -> on considère que c'est E.Leclerc (les vendeurs tiers
     # sont affichés en texte) : mieux vaut une notif de trop qu'un restock raté
